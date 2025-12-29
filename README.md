@@ -1,73 +1,94 @@
-# Welcome to your Lovable project
+📊 My Financial Compass
 
-## Project info
+A modern, responsive personal finance web application built with React, TypeScript, Vite, Tailwind CSS, and shadcn/ui.
+It helps users track spending, analyze finances, and plan financial goals efficiently.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+🚀 Project Overview
 
-## How can I edit this code?
+My Financial Compass is designed to provide:
 
-There are several ways of editing your application.
+Clear financial insights
 
-**Use Lovable**
+Simple goal planning
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+A clean, user-friendly UI
 
-Changes made via Lovable will be committed automatically to this repo.
+Fast performance with modern tooling
 
-**Use your preferred IDE**
+🛠️ Tech Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+This project is built using:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Vite – lightning-fast dev environment
 
-Follow these steps:
+React – UI framework
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+TypeScript – type safety
+
+Tailwind CSS – utility-first styling
+
+shadcn/ui – accessible UI components
+
+📁 Project Setup (Run Locally)
+Prerequisites
+
+Make sure you have:
+
+Node.js (v18 or later recommended)
+
+npm
+
+Installation & Run
+# Clone the repository
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Navigate to the project folder
+cd <PROJECT_FOLDER_NAME>
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Install dependencies
+npm install
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the development server
 npm run dev
-```
 
-**Edit a file directly in GitHub**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The app will run at:
 
-**Use GitHub Codespaces**
+http://localhost:5173
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+📦 Available Scripts
+Command	Description
+npm install	Install dependencies
+npm run dev	Start development server
+npm run build	Build for production
+npm run preview	Preview production build locally
+🌐 Deployment
 
-## What technologies are used for this project?
+You can deploy this project using any modern frontend hosting platform such as:
 
-This project is built with:
+Vercel
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Netlify
 
-## How can I deploy this project?
+Cloudflare Pages
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+GitHub Pages
 
-## Can I connect a custom domain to my Lovable project?
+Build command:
 
-Yes, you can!
+npm run build
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Output directory:
+
+dist/
+
+✨ Customization
+
+Update the app title and favicon in index.html
+
+Modify UI components in src/components
+
+Adjust styles via Tailwind config
+
+Extend features easily using React hooks and utilities
