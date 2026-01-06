@@ -1,15 +1,20 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Spending from "./pages/Spending";
-import Goals from "./pages/Goals";
-import Investments from "./pages/Investments";
-import Simulator from "./pages/Simulator";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 import Alerts from "./pages/Alerts";
+import Goals from "./pages/Goals";
+import Index from "./pages/Index";
+import Investments from "./pages/Investments";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Signup from "./pages/Signup";
+import Simulator from "./pages/Simulator";
+import Spending from "./pages/Spending";
 
 const queryClient = new QueryClient();
 
@@ -18,15 +23,73 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/spending" element={<Spending />} />
-          <Route path="/goals" element={<Goals />} />
-          <Route path="/investments" element={<Investments />} />
-          <Route path="/simulator" element={<Simulator />} />
-          <Route path="/alerts" element={<Alerts />} />
+
+          {/* Public routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+
+          {/* Protected routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/spending"
+            element={
+              <ProtectedRoute>
+                <Spending />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/goals"
+            element={
+              <ProtectedRoute>
+                <Goals />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/investments"
+            element={
+              <ProtectedRoute>
+                <Investments />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/simulator"
+            element={
+              <ProtectedRoute>
+                <Simulator />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/alerts"
+            element={
+              <ProtectedRoute>
+                <Alerts />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Default */}
+          <Route path="/" element={<Navigate to="/login" />} />
           <Route path="*" element={<NotFound />} />
+
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
