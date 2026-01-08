@@ -1,21 +1,21 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  PieChart, 
-  Target, 
-  TrendingUp, 
-  Sparkles, 
+import { cn } from "@/lib/utils";
+import {
   Bell,
-  Settings,
   ChevronLeft,
   ChevronRight,
+  LayoutDashboard,
+  PieChart,
+  Settings,
+  Sparkles,
+  Target,
+  TrendingUp,
   Wallet
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: PieChart, label: "Spending", path: "/spending" },
   { icon: Target, label: "Goals", path: "/goals" },
   { icon: TrendingUp, label: "Investments", path: "/investments" },
