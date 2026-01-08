@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import UploadStatement from "@/components/UploadStatement";
+import { auth } from "@/firebase/firebaseConfig";
 import { cn } from "@/lib/utils";
+import { onAuthStateChanged } from "firebase/auth";
+import { useEffect, useRef, useState } from "react";
 
 import {
   AlertTriangle,
@@ -43,14 +44,16 @@ const CATEGORY_META: Record<string, any> = {
   Entertainment: { icon: Film, color: "hsl(45, 70%, 55%)", budget: 5000 },
 };
 
-/* ---------------- TOOLTIP ---------------- */
+/* ---------------- CUSTOM TOOLTIP ---------------- */
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
+    const value = Number(payload[0].value || 0);
+
     return (
       <div className="bg-card border border-border rounded-lg p-3 shadow-warm">
         <p className="text-primary font-semibold">
-          ₹{payload[0].value.toLocaleString()}
+          ₹{value.toLocaleString()}
         </p>
       </div>
     );
@@ -64,51 +67,81 @@ const Spending = () => {
   const [selectedPeriod, setSelectedPeriod] = useState("month");
   const [categoryData, setCategoryData] = useState<any[]>([]);
   const [monthlyTrend, setMonthlyTrend] = useState<any[]>([]);
-
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const loadData = async () => {
-      const transactions = await getUserTransactions();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setCategoryData([]);
+        setMonthlyTrend([]);
+        return;
+      }
 
-      /* ---- CATEGORY AGGREGATION ---- */
+      const transactions = await getUserTransactions(user.uid);
+
+      /* ---------- CATEGORY AGGREGATION ---------- */
       const categoryMap: any = {};
 
       transactions.forEach((tx: any) => {
+        if (!tx.category) return;
+
+        const amount = Number(tx.amount || 0);
+
         if (!categoryMap[tx.category]) {
-          const meta = CATEGORY_META[tx.category];
+          const meta = CATEGORY_META[tx.category] || {};
           categoryMap[tx.category] = {
             name: tx.category,
             value: 0,
-            budget: meta?.budget || 0,
-            icon: meta?.icon || Coffee,
-            color: meta?.color || "hsl(30, 40%, 55%)",
+            budget: meta.budget || 0,
+            color: meta.color || "hsl(30, 40%, 55%)",
           };
         }
-        categoryMap[tx.category].value += tx.amount;
+
+        categoryMap[tx.category].value += amount;
       });
 
       setCategoryData(Object.values(categoryMap));
 
-      /* ---- MONTHLY TREND ---- */
+      /* ---------- MONTHLY TREND ---------- */
       const monthMap: any = {};
+
       transactions.forEach((tx: any) => {
-        monthMap[tx.month] = (monthMap[tx.month] || 0) + tx.amount;
+        if (!tx.createdAt) return;
+
+        const date = tx.createdAt.toDate();
+        const month = date.toLocaleString("en-US", { month: "short" });
+
+        monthMap[month] =
+          (monthMap[month] || 0) + Number(tx.amount || 0);
       });
 
-      setMonthlyTrend(
-        Object.keys(monthMap).map((m) => ({
-          month: m,
-          spending: monthMap[m],
-        }))
-      );
-    };
+      const orderedMonths = [
+        "Jan","Feb","Mar","Apr","May","Jun",
+        "Jul","Aug","Sep","Oct","Nov","Dec",
+      ];
 
-    loadData();
+      setMonthlyTrend(
+        orderedMonths
+          .filter((m) => monthMap[m])
+          .map((m) => ({
+            month: m,
+            spending: monthMap[m],
+          }))
+      );
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const totalSpending = categoryData.reduce((s, c) => s + c.value, 0);
-  const totalBudget = categoryData.reduce((s, c) => s + c.budget, 0);
+  const totalSpending = categoryData.reduce(
+    (sum, c) => sum + Number(c.value || 0),
+    0
+  );
+
+  const totalBudget = categoryData.reduce(
+    (sum, c) => sum + Number(c.budget || 0),
+    0
+  );
 
   return (
     <MainLayout>
@@ -125,13 +158,11 @@ const Spending = () => {
 
         <Button
           variant="warm"
-          className="gap-2"
           onClick={() => fileInputRef.current?.click()}
         >
           Upload Statement
         </Button>
 
-        {/* Hidden file input */}
         <UploadStatement ref={fileInputRef} />
       </div>
 
