@@ -1,11 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { 
-  AlertTriangle, Target, Sparkles, TrendingDown, 
+import {
+  AlertTriangle, Target, Sparkles, TrendingDown,
   PiggyBank, Bell, Check, X, Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { auth } from "@/firebase/firebaseConfig";
+import { onAuthStateChanged } from "firebase/auth";
+import { getUserTransactions } from "@/services/transactionService";
+import { generateFinancialAlerts } from "@/services/aiSimulator";
+
+const ICON_MAP: any = {
+  AlertTriangle,
+  Target,
+  Sparkles,
+  TrendingDown,
+  PiggyBank,
+  Check,
+  Bell
+};
 
 interface Alert {
   id: string;
@@ -18,82 +32,26 @@ interface Alert {
   actionable: boolean;
 }
 
-const alertsData: Alert[] = [
-  {
-    id: "1",
-    type: "warning",
-    icon: AlertTriangle,
-    title: "Overspending Alert",
-    message: "You've exceeded your food budget by ₹3,500 this month. Consider reducing dining out expenses.",
-    time: "2 hours ago",
-    read: false,
-    actionable: true,
-  },
-  {
-    id: "2",
-    type: "success",
-    icon: Target,
-    title: "Goal Milestone Reached!",
-    message: "Congratulations! You're now 75% towards your Emergency Fund goal. Keep up the great work!",
-    time: "1 day ago",
-    read: false,
-    actionable: false,
-  },
-  {
-    id: "3",
-    type: "info",
-    icon: Sparkles,
-    title: "AI Recommendation",
-    message: "Reducing dining out by ₹2,000/month could help you reach your car goal 3 months earlier.",
-    time: "2 days ago",
-    read: false,
-    actionable: true,
-  },
-  {
-    id: "4",
-    type: "danger",
-    icon: TrendingDown,
-    title: "Investment Alert",
-    message: "Your TCS holdings have dropped 8.9% this week. Consider reviewing your portfolio.",
-    time: "3 days ago",
-    read: true,
-    actionable: true,
-  },
-  {
-    id: "5",
-    type: "warning",
-    icon: PiggyBank,
-    title: "Emergency Fund Low",
-    message: "Your emergency fund covers only 2 months of expenses. The recommended minimum is 6 months.",
-    time: "5 days ago",
-    read: true,
-    actionable: true,
-  },
-  {
-    id: "6",
-    type: "success",
-    icon: Target,
-    title: "Savings Streak!",
-    message: "You've saved consistently for 3 months in a row. Your financial discipline is improving!",
-    time: "1 week ago",
-    read: true,
-    actionable: false,
-  },
-  {
-    id: "7",
-    type: "info",
-    icon: Sparkles,
-    title: "Tax Saving Opportunity",
-    message: "You can save up to ₹15,000 in taxes by investing ₹1,50,000 more in ELSS funds before March.",
-    time: "1 week ago",
-    read: true,
-    actionable: true,
-  },
-];
-
 const Alerts = () => {
-  const [alerts, setAlerts] = useState(alertsData);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [filter, setFilter] = useState<"all" | "unread" | "warning" | "success">("all");
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      const txns = await getUserTransactions();
+      const generated = generateFinancialAlerts(txns);
+
+      const mappedAlerts = generated.map((a: any) => ({
+        ...a,
+        icon: ICON_MAP[a.icon] || Bell,
+        read: false, // Default to unread for new dynamic alerts
+      }));
+
+      setAlerts(mappedAlerts);
+    });
+    return () => unsub();
+  }, []);
 
   const filteredAlerts = alerts.filter((alert) => {
     if (filter === "all") return true;

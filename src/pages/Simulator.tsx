@@ -13,7 +13,7 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Area,
   AreaChart,
@@ -23,6 +23,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { FutureYouChat } from "@/components/dashboard/FutureYouChat";
+import { generateFuturePersona, getAlertMessage } from "@/services/aiSimulator";
+import { toast } from "sonner";
 
 /* ------------------ Projection Logic ------------------ */
 const generateProjection = (
@@ -70,13 +73,15 @@ const Simulator = () => {
   const [monthlySavings, setMonthlySavings] = useState(15000);
   const [currentSavings, setCurrentSavings] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [persona, setPersona] = useState<any>(null);
+  const prevSavingsRef = useRef(monthlySavings);
 
   /* -------- FETCH USER DATA -------- */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) return;
 
-      const txns = await getUserTransactions(user.uid);
+      const txns = await getUserTransactions();
 
       /**
        * REALISTIC LOGIC:
@@ -101,7 +106,24 @@ const Simulator = () => {
 
   const handleSimulate = () => {
     setIsAnimating(true);
-    setTimeout(() => setIsAnimating(false), 800);
+    setTimeout(() => {
+      setIsAnimating(false);
+      const newPersona = generateFuturePersona(currentSavings, monthlySavings);
+      setPersona(newPersona);
+
+      // Dynamic Alert
+      const alert = getAlertMessage(monthlySavings, prevSavingsRef.current);
+      prevSavingsRef.current = monthlySavings; // Update ref for next time
+
+      if (alert.type === "success") {
+        toast.success(alert.title, { description: alert.description });
+      } else if (alert.type === "destructive") {
+        toast.error(alert.title, { description: alert.description });
+      } else {
+        toast.info(alert.title, { description: alert.description });
+      }
+
+    }, 800);
   };
 
   return (
@@ -129,85 +151,106 @@ const Simulator = () => {
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="card-warm p-8 mb-8">
-        <div className="flex items-center gap-3 mb-6">
-          <Sparkles className="h-6 w-6 text-accent" />
-          <h3 className="font-serif text-xl font-semibold">
-            Monthly Savings Adjustment
-          </h3>
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-8">
-          <div>
-            <div className="flex justify-between mb-4">
-              <span className="text-muted-foreground">
-                Monthly Savings
-              </span>
-              <span className="font-serif text-2xl font-bold text-primary">
-                ₹{monthlySavings.toLocaleString()}
-              </span>
+      <div className="grid lg:grid-cols-3 gap-8 mb-8">
+        {/* Controls */}
+        <div className="lg:col-span-2 space-y-8">
+          <div className="card-warm p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <Sparkles className="h-6 w-6 text-accent" />
+              <h3 className="font-serif text-xl font-semibold">
+                Monthly Savings Adjustment
+              </h3>
             </div>
 
-            <Slider
-              value={[monthlySavings]}
-              onValueChange={(v) => setMonthlySavings(v[0])}
-              min={5000}
-              max={50000}
-              step={1000}
-            />
-          </div>
+            <div className="grid lg:grid-cols-2 gap-8">
+              <div>
+                <div className="flex justify-between mb-4">
+                  <span className="text-muted-foreground">Monthly Savings</span>
+                  <span className="font-serif text-2xl font-bold text-primary">
+                    ₹{monthlySavings.toLocaleString()}
+                  </span>
+                </div>
 
-          <div className="flex items-center justify-center gap-8">
-            <div className="text-center">
-              <p className="text-muted-foreground text-sm">
-                Current Path
-              </p>
-              <p className="font-serif text-xl font-bold">
-                ₹{monthlySavings.toLocaleString()}
-              </p>
-            </div>
+                <Slider
+                  value={[monthlySavings]}
+                  onValueChange={(v) => setMonthlySavings(v[0])}
+                  min={5000}
+                  max={50000}
+                  step={1000}
+                />
+              </div>
 
-            <ArrowRight />
+              <div className="flex items-center justify-center gap-8">
+                <div className="text-center">
+                  <p className="text-muted-foreground text-sm">Current Path</p>
+                  <p className="font-serif text-xl font-bold">
+                    ₹{monthlySavings.toLocaleString()}
+                  </p>
+                </div>
 
-            <div className="text-center">
-              <p className="text-muted-foreground text-sm">
-                Improved Path
-              </p>
-              <p className="font-serif text-xl font-bold text-success">
-                ₹{Math.round(monthlySavings * 1.5).toLocaleString()}
-              </p>
+                <ArrowRight />
+
+                <div className="text-center">
+                  <p className="text-muted-foreground text-sm">Improved Path</p>
+                  <p className="font-serif text-xl font-bold text-success">
+                    ₹{Math.round(monthlySavings * 1.5).toLocaleString()}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Chart */}
+          <div className="card-warm p-6">
+            <h3 className="font-serif text-xl mb-6">10-Year Projection</h3>
+
+            <div className={cn("h-80", isAnimating && "opacity-50")}>
+              <ResponsiveContainer>
+                <AreaChart data={projectionData}>
+                  <XAxis dataKey="year" />
+                  <YAxis tickFormatter={(v) => `₹${v / 100000}L`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend />
+
+                  <Area
+                    dataKey="current"
+                    name="Current Path"
+                    stroke="hsl(var(--muted-foreground))"
+                    fillOpacity={0.2}
+                  />
+                  <Area
+                    dataKey="improved"
+                    name="Improved Path"
+                    stroke="hsl(var(--success))"
+                    fillOpacity={0.3}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Chart */}
-      <div className="card-warm p-6 mb-8">
-        <h3 className="font-serif text-xl mb-6">10-Year Projection</h3>
+        {/* AI Chat & Analysis */}
+        <div className="space-y-6">
+          {persona && (
+            <div className="card-warm p-6 animate-in fade-in slide-in-from-bottom-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="h-5 w-5 text-accent" />
+                <h3 className="font-serif text-lg font-bold">{persona.title}</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                {persona.description}
+              </p>
+              <div className="bg-muted/50 p-3 rounded-lg text-sm italic">
+                "{persona.advice}"
+              </div>
+            </div>
+          )}
 
-        <div className={cn("h-80", isAnimating && "opacity-50")}>
-          <ResponsiveContainer>
-            <AreaChart data={projectionData}>
-              <XAxis dataKey="year" />
-              <YAxis tickFormatter={(v) => `₹${v / 100000}L`} />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-
-              <Area
-                dataKey="current"
-                name="Current Path"
-                stroke="hsl(var(--muted-foreground))"
-                fillOpacity={0.2}
-              />
-              <Area
-                dataKey="improved"
-                name="Improved Path"
-                stroke="hsl(var(--success))"
-                fillOpacity={0.3}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <FutureYouChat
+            currentSavings={currentSavings}
+            monthlySavings={monthlySavings}
+          />
         </div>
       </div>
 
