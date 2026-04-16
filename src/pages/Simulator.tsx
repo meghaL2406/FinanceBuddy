@@ -74,6 +74,7 @@ const Simulator = () => {
   const [currentSavings, setCurrentSavings] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [persona, setPersona] = useState<any>(null);
+  const [userTransactions, setUserTransactions] = useState<any[]>([]); // New State
   const prevSavingsRef = useRef(monthlySavings);
 
   /* -------- FETCH USER DATA -------- */
@@ -82,6 +83,7 @@ const Simulator = () => {
       if (!user) return;
 
       const txns = await getUserTransactions();
+      setUserTransactions(txns); // Set State
 
       /**
        * REALISTIC LOGIC:
@@ -250,6 +252,7 @@ const Simulator = () => {
           <FutureYouChat
             currentSavings={currentSavings}
             monthlySavings={monthlySavings}
+            transactions={userTransactions}
           />
         </div>
       </div>

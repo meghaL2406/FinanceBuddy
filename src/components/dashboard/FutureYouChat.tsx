@@ -13,11 +13,13 @@ interface Message {
 interface FutureYouChatProps {
     currentSavings: number;
     monthlySavings: number;
+    transactions?: any[];
 }
 
 export const FutureYouChat = ({
     currentSavings,
     monthlySavings,
+    transactions = [],
 }: FutureYouChatProps) => {
     const [input, setInput] = useState("");
     const [messages, setMessages] = useState<Message[]>([
@@ -30,7 +32,7 @@ export const FutureYouChat = ({
     const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    const handleSend = () => {
+    const handleSend = async () => {
         if (!input.trim()) return;
 
         const userMsg: Message = {
@@ -43,28 +45,31 @@ export const FutureYouChat = ({
         setInput("");
         setIsTyping(true);
 
-        // Simulate AI delay
-        setTimeout(() => {
-            const responseText = getChatResponse(
+        try {
+            const responseText = await getChatResponse(
                 userMsg.text,
                 currentSavings,
-                monthlySavings
+                monthlySavings,
+                transactions
             );
+
             const aiMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 sender: "ai",
                 text: responseText,
             };
             setMessages((prev) => [...prev, aiMsg]);
+        } catch (error) {
+            console.error("Chat Error", error);
+        } finally {
             setIsTyping(false);
-
             // Auto-scroll
             if (scrollRef.current) {
                 setTimeout(() => {
                     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
                 }, 100);
             }
-        }, 1500);
+        }
     };
 
     return (
@@ -86,8 +91,8 @@ export const FutureYouChat = ({
                         >
                             <div
                                 className={`max-w-[80%] rounded-lg p-3 text-sm ${m.sender === "user"
-                                        ? "bg-primary text-primary-foreground"
-                                        : "bg-muted text-foreground"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-foreground"
                                     }`}
                             >
                                 {m.text}
