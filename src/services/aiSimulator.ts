@@ -52,33 +52,99 @@ export const generateFuturePersona = (
   }
 };
 
-export const getChatResponse = (
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+
+// Helper to summarize financial habits from transactions
+const summarizeFinancials = (transactions: any[]) => {
+  if (!transactions || transactions.length === 0) return "No recent transaction history available.";
+
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  // 1. Calculate Monthly Averages (Income vs Expense)
+  const incomeMap = new Map<string, number>(); // month-year -> amount
+  const expenseMap = new Map<string, number>();
+
+  transactions.forEach((t) => {
+    const d = new Date(t.date || t.createdAt?.toDate()); // Handle Firestore Timestamp or ISO string
+    const key = `${d.getMonth()}-${d.getFullYear()}`;
+    const amount = Number(t.amount);
+
+    if (t.type === "income") {
+      incomeMap.set(key, (incomeMap.get(key) || 0) + amount);
+    } else if (t.type === "expense") {
+      expenseMap.set(key, (expenseMap.get(key) || 0) + amount);
+    }
+  });
+
+  const avgIncome =
+    Array.from(incomeMap.values()).reduce((a, b) => a + b, 0) / (incomeMap.size || 1);
+  const avgExpense =
+    Array.from(expenseMap.values()).reduce((a, b) => a + b, 0) / (expenseMap.size || 1);
+
+  // 2. Top Spending Categories
+  const categoryMap = new Map<string, number>();
+  transactions
+    .filter((t) => t.type === "expense")
+    .forEach((t) => {
+      const cat = t.category || "Uncategorized";
+      categoryMap.set(cat, (categoryMap.get(cat) || 0) + Number(t.amount));
+    });
+
+  const topCategories = Array.from(categoryMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([cat, amount]) => `${cat} (₹${amount.toLocaleString()})`)
+    .join(", ");
+
+  return `
+    - Average Monthly Income: ₹${Math.round(avgIncome).toLocaleString()}
+    - Average Monthly Expense: ₹${Math.round(avgExpense).toLocaleString()}
+    - Top Spending Areas: ${topCategories || "None"}
+  `;
+};
+
+export const getChatResponse = async (
   message: string,
   currentSavings: number,
-  monthlySavings: number
-): string => {
-  const msg = message.toLowerCase();
+  monthlySavings: number,
+  transactions: any[] = []
+): Promise<string> => {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-  if (msg.includes("save") || msg.includes("saving")) {
-    return `Currently, you're saving ₹${monthlySavings.toLocaleString()} per month. If you can bump that to ₹${(
-      monthlySavings * 1.2
-    ).toLocaleString()}, your future self will thank you immensely!`;
+    const financialSummary = summarizeFinancials(transactions);
+
+    const prompt = `
+      You are a "Future Self" persona from 10 years in the future. 
+      You are talking to your past self (the user).
+      
+      Current Financial Context (Your Past / User's Present):
+      - Current Savings: ₹${currentSavings.toLocaleString()}
+      - Monthly Savings: ₹${monthlySavings.toLocaleString()}
+      ${financialSummary}
+      
+      The user asks: "${message}"
+
+      Instructions:
+      1. Answer as if you are living the life resulting from these specific financial habits.
+      2. If the user asks about their spending, reference the "Top Spending Areas" specifically.
+      3. Be encouraging but realistic. If savings are low (< 20% of income), warn them gently about the difficulties you face (lack of travel, anxiety).
+      4. If savings are high, describe the freedom you enjoy (early retirement options, travel).
+      5. If the question is NOT related to finance, life goals, or career, politely refuse and say "I can only remember our financial journey."
+      6. Keep the response concise (under 3 sentences) and conversational.
+    `;
+
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    return response.text();
+  } catch (error) {
+    console.error("Error fetching AI response:", error);
+    return "I'm having trouble connecting to the timeline right now. (API Error: Please check your API key)";
   }
-
-  if (msg.includes("invest") || msg.includes("stock") || msg.includes("fund")) {
-    return "I recommend a diversified portfolio. a 70/30 Equity/Debt split is often good for long-term growth (10+ years), but always do your own research or consult a certified advisor.";
-  }
-
-  if (msg.includes("retirement") || msg.includes("retire")) {
-    const projected = monthlySavings * 12 * 20; // very rough 20 year linear
-    return `To retire comfortably, you usually need 20-25x your annual expenses. With your current path, you might fall short. Can we find an extra ₹5,000 in your monthly budget?`;
-  }
-
-  if (msg.includes("risk") || msg.includes("safe")) {
-    return "Risk is the price you pay for growth. If you're young, you can afford more volatility. If you're nearing 50, prioritize capital protection.";
-  }
-
-  return "That's a great question. As your Future Self, I care most about consistency. Whatever you decide, stick to it for at least 5 years. Compounding needs time.";
 };
 
 export const getAlertMessage = (
